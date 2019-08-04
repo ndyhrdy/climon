@@ -1,15 +1,24 @@
-import { createStore, applyMiddleware, compose } from 'redux';
-import thunk from 'redux-thunk';
 import { createHashHistory } from 'history';
-import { routerMiddleware, routerActions } from 'connected-react-router';
 import { createLogger } from 'redux-logger';
-import createRootReducer from '../reducers';
+import { createStore, applyMiddleware, compose } from 'redux';
+import { routerMiddleware, routerActions } from 'connected-react-router';
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
+
+import thunk from 'redux-thunk';
+
 import * as counterActions from '../actions/counter';
+import createRootReducer from '../reducers';
 import type { counterStateType } from '../reducers/types';
 
 const history = createHashHistory();
 
 const rootReducer = createRootReducer(history);
+
+const persistConfig = {
+  key: 'root',
+  storage
+};
 
 const configureStore = (initialState?: counterStateType) => {
   // Redux Configuration
@@ -53,8 +62,11 @@ const configureStore = (initialState?: counterStateType) => {
   enhancers.push(applyMiddleware(...middleware));
   const enhancer = composeEnhancers(...enhancers);
 
+  const persistedReducer = persistReducer(persistConfig, rootReducer);
+
   // Create Store
-  const store = createStore(rootReducer, initialState, enhancer);
+  const store = createStore(persistedReducer, initialState, enhancer);
+  const persistor = persistStore(store);
 
   if (module.hot) {
     module.hot.accept(
@@ -64,7 +76,7 @@ const configureStore = (initialState?: counterStateType) => {
     );
   }
 
-  return store;
+  return { store, persistor };
 };
 
 export default { configureStore, history };
